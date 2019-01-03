@@ -383,6 +383,9 @@ defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
+def use_opencl: F<"use-opencl">,
+  HelpText<"Use OpenCL for parallelism">;
+
 // Aliases
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
