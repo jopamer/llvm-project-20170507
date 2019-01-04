@@ -31,6 +31,7 @@
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "MarkLive.h"
+#include "OpenCL.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "SymbolTable.h"
@@ -70,6 +71,7 @@ using namespace lld::elf;
 
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
+OpenCLContext *elf::CLContext;
 
 static void setConfigs(opt::InputArgList &Args);
 
@@ -430,6 +432,10 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   checkOptions();
   if (errorCount())
     return;
+
+  if (Config->UseOpenCL) {
+    CLContext = make<OpenCLContext>();
+  }
 
   switch (Config->EKind) {
   case ELF32LEKind:
@@ -858,6 +864,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   Config->UseAndroidRelrTags = Args.hasFlag(
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
+  Config->UseOpenCL = Args.hasArg(OPT_use_opencl);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->WarnBackrefs =
       Args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);

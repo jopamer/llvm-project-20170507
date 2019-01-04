@@ -219,8 +219,6 @@ if (LLVM_INCLUDE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-find_package(OpenCL REQUIRED)
-
 add_subdirectory(docs)
 add_subdirectory(COFF)
 add_subdirectory(ELF)

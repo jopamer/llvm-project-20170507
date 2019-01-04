@@ -2,6 +2,9 @@ set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ELFOptionsTableGen)
 
+find_package(OpenCL REQUIRED)
+find_library(OPENCL_LIBRARIES OpenCL)
+
 if(NOT LLD_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
@@ -60,6 +63,7 @@ add_lld_library(lldELF
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${OPENCL_LIBRARIES}
 
   DEPENDS
   ELFOptionsTableGen

@@ -176,6 +176,7 @@ struct Configuration {
   bool TocOptimize;
   bool UndefinedVersion;
   bool UseAndroidRelrTags = false;
+  bool UseOpenCL;
   bool WarnBackrefs;
   bool WarnCommon;
   bool WarnIfuncTextrel;
