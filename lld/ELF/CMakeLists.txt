@@ -37,6 +37,7 @@ add_lld_library(lldELF
   LinkerScript.cpp
   MapFile.cpp
   MarkLive.cpp
+  OpenCL.cpp
   OutputSections.cpp
   Relocations.cpp
   ScriptLexer.cpp

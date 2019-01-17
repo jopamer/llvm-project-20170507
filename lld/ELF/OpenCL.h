@@ -13,6 +13,7 @@
 #include "lld/Common/LLVM.h"
 
 #include <OpenCL/cl.h>
+#include <thread>
 
 static unsigned char kernel_data[] = {
   0xde, 0xc0, 0x17, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
@@ -249,18 +250,28 @@ namespace elf {
 class OpenCLContext {
 private:
 
+    void initKernel();
+
+    std::thread *t = nullptr;
+    cl_context context;
+    cl_device_id deviceID;
+
 public:
 
     const unsigned char *kernel_bc = kernel_data;
     const size_t kernel_bc_len = kernel_len;
 
-    OpenCLContext() {
-        printf("Now we're cooking with gas!\n");
+    OpenCLContext();
+    ~OpenCLContext();
+    void init();
+    void ensureInit();
+    cl_context getContext() {
+        return context;
+    }
+    cl_device_id getDeviceID() {
+        return deviceID;
     }
 
-    ~OpenCLContext() {
-        printf("Turning off the gas...\n");
-    }
 };
 
 extern OpenCLContext *CLContext;

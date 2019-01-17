@@ -435,6 +435,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   if (Config->UseOpenCL) {
     CLContext = make<OpenCLContext>();
+    CLContext->init();
   }
 
   switch (Config->EKind) {

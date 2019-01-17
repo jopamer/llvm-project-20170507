@@ -341,10 +341,14 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
   cl_int err;
   cl_int load_err;
 
-  cl_uint nDevices;
-  cl_device_id device_id[2]; // My MBP has two GPUs - an Intel and an AMD Radeon.
-  uint device = 1; // 0: Intel on-board, 1: Radeon
-  cl_context context;
+  CLContext->ensureInit();
+  // struct timeval init1;
+  // gettimeofday(&init1, NULL);
+  // printf("total seconds to create GPU context is %f\n", (double)(init1.tv_usec - start.tv_usec) / 1000000 + (double)(init1.tv_sec - start.tv_sec));
+
+
+  cl_context context = CLContext->getContext();
+  cl_device_id deviceID = CLContext->getDeviceID();
 
   // const unsigned char* binary_file;
   // FILE* fBinary;
@@ -352,7 +356,7 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
 
   cl_mem input_clbuffer;
   cl_mem output_clbuffer;
-  //cl_mem total_output_clbuffer;
+  // cl_mem total_output_clbuffer;
 
   size_t data_buffer_size = Data.size();
   assert(!(data_buffer_size % 8));
@@ -365,23 +369,14 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
   size_t result_buffer_size = nHashes * sizeof(uint64_t);
   unsigned char *data = (unsigned char*)Data.data();
 
-  err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 2, device_id, &nDevices);
-  assert(err == CL_SUCCESS);
-
-  context = clCreateContext(0, 1, &device_id[device], NULL, NULL, &err);
-  assert(context && err == CL_SUCCESS);
-
-  struct timeval init1;
-  gettimeofday(&init1, NULL);
-  printf("total seconds to create GPU context is %f\n", (double)(init1.tv_usec - start.tv_usec) / 1000000 + (double)(init1.tv_sec - start.tv_sec));
+  // struct timeval init1;
 
   // CL_QUEUE_PROFILING_ENABLE
-  cl_command_queue command = clCreateCommandQueue(context, device_id[device], CL_QUEUE_PROFILING_ENABLE, &err);
-  cl_event event;
+  cl_command_queue command = clCreateCommandQueue(context, deviceID, 0, &err);
 
-  struct timeval init2;
-  gettimeofday(&init2, NULL);
-  printf("total seconds to create command queue is %f\n", (double)(init2.tv_usec - init1.tv_usec) / 1000000 + (double)(init2.tv_sec - init1.tv_sec));
+  // struct timeval init2;
+  // gettimeofday(&init2, NULL);
+  // printf("total seconds to create command queue is %f\n", (double)(init2.tv_usec - init1.tv_usec) / 1000000 + (double)(init2.tv_sec - init1.tv_sec));
 
   // Load the pre-compiled binary
   // fBinary = fopen("/Users/jpamer/lab/OpenCL Test/OpenCL Test/kernel.bc", "r");
@@ -394,18 +389,18 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
 
   // Compilation command:
   // /System/Library/Frameworks/OpenCL.framework/Libraries/openclc -c -Wall -emit-llvm -arch gpu_32 -o kernel.bc kernel.cl
-  cl_program program = clCreateProgramWithBinary(context, 1, &device_id[device], &CLContext->kernel_bc_len,
+  cl_program program = clCreateProgramWithBinary(context, 1, &deviceID, &CLContext->kernel_bc_len,
                                                   &CLContext->kernel_bc, &load_err, &err);
 
   // Need to build the program despite having the binary - lowers from LLVM bitcode?
   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
 
-  struct timeval init3;
-  gettimeofday(&init3, NULL);
-  printf("total seconds to create and build program is %f\n", (double)(init3.tv_usec - init2.tv_usec) / 1000000 + (double)(init3.tv_sec - init2.tv_sec));
+  // struct timeval init3;
+  // gettimeofday(&init3, NULL);
+  // printf("total seconds to create and build program is %f\n", (double)(init3.tv_usec - init2.tv_usec) / 1000000 + (double)(init3.tv_sec - init2.tv_sec));
 
   cl_kernel kernel = clCreateKernel(program, "xxHash64", &err);
-  //cl_kernel kernel2 = clCreateKernel(program, "xxHash64", &err);
+  // cl_kernel kernel2 = clCreateKernel(program, "xxHash64", &err);
 
   input_clbuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, data_buffer_size, data, &err);
   assert(err == CL_SUCCESS);
@@ -414,9 +409,9 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
   // total_output_clbuffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(uint64_t), NULL, &err);
   // assert(err == CL_SUCCESS);
 
-  struct timeval init4;
-  gettimeofday(&init4, NULL);
-  printf("total seconds to create arg buffers is %f\n", (double)(init4.tv_usec - init3.tv_usec) / 1000000 + (double)(init4.tv_sec - init3.tv_sec));
+  // struct timeval init4;
+  // gettimeofday(&init4, NULL);
+  // printf("total seconds to create arg buffers is %f\n", (double)(init4.tv_usec - init3.tv_usec) / 1000000 + (double)(init4.tv_sec - init3.tv_sec));
 
   err = 0;
   err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_clbuffer);
@@ -432,37 +427,37 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
 
   size_t local_size = 1;
   size_t global_size = nHashes;
-  err = clGetKernelWorkGroupInfo(kernel, device_id[device], CL_KERNEL_WORK_GROUP_SIZE, sizeof(local_size), &local_size, NULL);
+  err = clGetKernelWorkGroupInfo(kernel, deviceID, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local_size), &local_size, NULL);
   assert(err == CL_SUCCESS);
 
-  struct timeval init5;
-  gettimeofday(&init5, NULL);
-  printf("total seconds to get workgroup info is %f\n", (double)(init5.tv_usec - init4.tv_usec) / 1000000 + (double)(init5.tv_sec - init4.tv_sec));
+  // struct timeval init5;
+  // gettimeofday(&init5, NULL);
+  // printf("total seconds to get workgroup info is %f\n", (double)(init5.tv_usec - init4.tv_usec) / 1000000 + (double)(init5.tv_sec - init4.tv_sec));
 
-  struct timeval check1;
-  gettimeofday(&check1, NULL);
-  printf("total seconds in GPU init is %f\n", (double)(check1.tv_usec - start.tv_usec) / 1000000 + (double)(check1.tv_sec - start.tv_sec));
+  // struct timeval check1;
+  // gettimeofday(&check1, NULL);
+  // printf("total seconds in GPU init is %f\n", (double)(check1.tv_usec - start.tv_usec) / 1000000 + (double)(check1.tv_sec - start.tv_sec));
 
   // Write again for enhanced accuracy...
-  gettimeofday(&check1, NULL);
+  //gettimeofday(&check1, NULL);
   // Compute individual hashes.
-  err = clEnqueueNDRangeKernel(command, kernel, 1, NULL, &global_size, &local_size, 0, NULL, &event);
+  err = clEnqueueNDRangeKernel(command, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
   //printf("err: %d", err);
   assert(err == CL_SUCCESS);
   clFinish(command);
 
-  struct timeval check2;
-  gettimeofday(&check2, NULL);
-  printf("total seconds in GPU execution is %f\n", (double)(check2.tv_usec - check1.tv_usec) / 1000000 + (double)(check2.tv_sec - check1.tv_sec));
+  // struct timeval check2;
+  // gettimeofday(&check2, NULL);
+  // printf("total seconds in GPU execution is %f\n", (double)(check2.tv_usec - check1.tv_usec) / 1000000 + (double)(check2.tv_sec - check1.tv_sec));
 
 
-  cl_ulong time_start;
-  cl_ulong time_end;
+  // cl_ulong time_start;
+  // cl_ulong time_end;
 
-  clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-  clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-  double nanoSeconds = time_end-time_start;
-  printf("OpenCl event execution time is: %0.3f seconds \n",nanoSeconds / 1000000000.0);
+  // clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+  // clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+  // double nanoSeconds = time_end-time_start;
+  // printf("OpenCl event execution time is: %0.3f seconds \n",nanoSeconds / 1000000000.0);
 
   // Create the hash of hashes.
   // err = clEnqueueTask(command, kernel2, 0, NULL, NULL);
@@ -471,37 +466,38 @@ static void gpuHash64(ArrayRef<uint8_t> Data, uint8_t *dest) {
 
   uint64_t *gpu_hash_buffer = (uint64_t*)malloc(result_buffer_size);
   err = clEnqueueReadBuffer(command, output_clbuffer, CL_TRUE, 0, result_buffer_size, gpu_hash_buffer, 0, NULL, NULL);
-  //err = clEnqueueReadBuffer(command, total_output_clbuffer, CL_TRUE, 0, sizeof(uint64_t), (uint64_t*)dest, 0, NULL, NULL);
+  // err = clEnqueueReadBuffer(command, total_output_clbuffer, CL_TRUE, 0, sizeof(uint64_t), (uint64_t*)dest, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
 
-  struct timeval check3;
-  gettimeofday(&check3, NULL);
-  printf("total seconds in GPU buffer read is %f\n", (double)(check3.tv_usec - check2.tv_usec) / 1000000 + (double)(check3.tv_sec - check2.tv_sec));
+  // struct timeval check3;
+  // gettimeofday(&check3, NULL);
+  // printf("total seconds in GPU buffer read is %f\n", (double)(check3.tv_usec - check2.tv_usec) / 1000000 + (double)(check3.tv_sec - check2.tv_sec));
 
 
-  clock_t start_clock = clock();
+  // clock_t start_clock = clock();
   uint64_t total = xxHash64({(const char *)gpu_hash_buffer, result_buffer_size});
   write64le(dest, total);
-  uint64_t end_clock = clock();
-  printf("Writing back took %d ticks\n", end_clock - start_clock);
+  // uint64_t end_clock = clock();
+  // printf("Writing back took %d ticks\n", end_clock - start_clock);
 
-  struct timeval check4;
-  gettimeofday(&check4, NULL);
-  printf("total seconds in total hash is %f\n", (double)(check4.tv_usec - check3.tv_usec) / 1000000 + (double)(check4.tv_sec - check3.tv_sec));
+  // struct timeval check4;
+  // gettimeofday(&check4, NULL);
+  // printf("total seconds in total hash is %f\n", (double)(check4.tv_usec - check3.tv_usec) / 1000000 + (double)(check4.tv_sec - check3.tv_sec));
 
   clReleaseContext(context);
   clReleaseMemObject(input_clbuffer);
   clReleaseMemObject(output_clbuffer);
-  //clReleaseMemObject(total_output_clbuffer);
+  // clReleaseMemObject(total_output_clbuffer);
   clReleaseProgram(program);
   clReleaseKernel(kernel);
+  // clReleaseKernel(kernel2);
   clReleaseCommandQueue(command);
   //fclose(fBinary);
   //free((void*)binary_file);
   //free(data);
   free(gpu_hash_buffer);
-  gettimeofday(&stop, NULL);
-  printf("total seconds in GPU function is %f\n", (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec));
+  // gettimeofday(&stop, NULL);
+  // printf("total seconds in GPU function is %f\n", (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec));
 }
 
 void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
